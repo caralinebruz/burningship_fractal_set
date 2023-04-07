@@ -1,6 +1,3 @@
-# project specific
-!.gitignore obj/*
-
 # Prerequisites
 *.d
 
