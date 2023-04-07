@@ -10,17 +10,27 @@ using namespace cv;
 namespace
 {
     //! [mandelbrot-escape-time-algorithm]
-    int mandelbrot(const complex<float> &z0, const int max)
+    int mandelbrot(const float &cr, const float &ci, const int max)
     {
-        complex<float> z = z0;
+        // complex<float> z = c;
+        float zr = 0;
+        float zi = 0;
+        float re = 0;
+        float im = 0;
+
+
         for (int t = 0; t < max; t++)
         {
 
-            if (z.real()*z.real() + z.imag()*z.imag() > 4.0f) {
+            if ((zr * zr + zi * zi) > 4.0f) {
                 return t;
             }
 
-            z = z*z + z0;
+            // z = z*z + c;
+            re = zr * zr - zi * zi + cr;
+            im = zr * zi * 2.0 + ci;
+            zr = re;
+            zi = im;
         }
         return max;
     }
@@ -28,8 +38,10 @@ namespace
 
 
     //! [mandelbrot-grayscale-value]
-    int mandelbrotFormula(const complex<float> &z0, const int maxIter=500) {
-        int value = mandelbrot(z0, maxIter);
+    int mandelbrotFormula(const float &cr, const float &ci, const int maxIter=500) {
+
+        int value = mandelbrot(cr, ci, maxIter);
+
         if(maxIter - value == 0)
         {
             return 0;
@@ -41,7 +53,6 @@ namespace
 
 
     //! [mandelbrot-sequential]
-    // void sequentialMandelbrot(Mat &img, int*pixelMatrix, int rows, int cols, const float x1, const float y1, const float scaleX, const float scaleY)
     void sequentialMandelbrot(int*pixelMatrix, int rows, int cols, const float x1, const float y1, const float scaleX, const float scaleY)
     {
         for (int i = 0; i < rows; i++)
@@ -51,12 +62,13 @@ namespace
                 float x0 = j / scaleX + x1;
                 float y0 = i / scaleY + y1;
 
-                complex<float> z0(x0, y0);
+                complex<float> c(x0, y0);
+                float cr = x0;
+                float ci = y0;
 
-                int grayscale_value = mandelbrotFormula(z0);
-                // printf("grayscale_value %d \n", grayscale_value);
+                // for each pixel get the grayscale value
+                int grayscale_value = mandelbrotFormula(cr,cr);
 
-                // add it to the correct location in the pixel matrix
                 pixelMatrix[i+j*rows] = grayscale_value;
 
             }
@@ -100,8 +112,8 @@ int main()
     // define the grid 
     float x1 = -2.1f, x2 = 0.6f;
     float y1 = -1.2f, y2 = 1.2f;
-    float scaleX = cols_y / (x2 - x1); // ->  5400 / (0.6 - -2.1) ~= 2000.
-    float scaleY = rows_x / (y2 - y1); // ->  4800 / (1.2 - -1.2) ~= 2000.
+    float scaleX = cols_y / (x2 - x1); // ->  5400 / (0.6 - -2.1) ~= 2000
+    float scaleY = rows_x / (y2 - y1); // ->  4800 / (1.2 - -1.2) ~= 2000
 
 
     //! [mandelbrot-transformation]
