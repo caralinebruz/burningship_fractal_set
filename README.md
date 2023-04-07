@@ -11,7 +11,7 @@ A simple algorithm to generate a representation of the Mandelbrot set is called 
 ### Installation
 I installed this on my mac using `brew install opencv`. See Makefile for location to add. 
 
-Also required to add a directory `obj` to the project root directory.
+Before compiling, add a directory `mkdir obj` to the project root directory.
 
 
 ### References
