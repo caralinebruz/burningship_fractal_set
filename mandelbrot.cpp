@@ -18,10 +18,8 @@ namespace
         float re = 0;
         float im = 0;
 
-
         for (int t = 0; t < max; t++)
         {
-
             if ((zr * zr + zi * zi) > 4.0f) {
                 return t;
             }
@@ -67,7 +65,7 @@ namespace
                 float ci = y0;
 
                 // for each pixel get the grayscale value
-                int grayscale_value = mandelbrotFormula(cr,cr);
+                int grayscale_value = mandelbrotFormula(cr,ci);
 
                 pixelMatrix[i+j*rows] = grayscale_value;
 
