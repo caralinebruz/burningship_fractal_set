@@ -1,7 +1,9 @@
+#define _GLIBCXX_USE_CXX11_ABI 0
+
 #include <iostream>
 #include <math.h>
-#include <opencv2/core.hpp>
-#include <opencv2/imgcodecs.hpp>
+#include <opencv2/opencv.hpp>
+
 #include "utils.h"
 
 using namespace std;
