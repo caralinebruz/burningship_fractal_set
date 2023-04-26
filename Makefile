@@ -6,7 +6,7 @@
 # LDFLAGS:=$(shell pkg-config --cflags --libs /usr/local/Cellar/opencv/*/lib/pkgconfig/opencv4.pc)
 
 # CIMS Server, need to load module
-module loac gcc-12.2
+# module loac gcc-12.2
 OPENCV_CFLAGS := $(shell pkg-config --cflag opencv)
 OPENCV_LIBS := $(shell pkg-config --libs opencv)
 LDFLAGS := $(OPENCV_LIBS) $(OPENCV_CFLAGS)
