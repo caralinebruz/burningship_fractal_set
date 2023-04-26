@@ -16,14 +16,14 @@ CFLAGS:=--std=c++14 -ggdb
 SRC_FILES:=$(wildcard ./*.cpp)
 OBJ_FILES:=$(patsubst %.cpp,obj/%.o,$(SRC_FILES))
 
-all: mandelbrot
+all: burningship
 
-mandelbrot: $(OBJ_FILES)
+burningship: $(OBJ_FILES)
 	$(CC) $(LDFLAGS) -o $@ $^
 
 obj/%.o: %.cpp
 	$(CC) $(LDFLAGS) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm mandelbrot
+	rm burningship
 	rm obj/*.o
