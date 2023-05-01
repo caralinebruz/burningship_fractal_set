@@ -1,3 +1,4 @@
+#define _GLIBCXX_USE_CXX11_ABI 0
 #include <iostream>
 #include <math.h>
 #include <opencv2/core.hpp>
