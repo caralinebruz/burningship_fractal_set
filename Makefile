@@ -18,6 +18,8 @@ CUDA_LIBS = -lblas -L${CUDA_HOME}/lib64 -lcudart
 NVCC = nvcc
 NVCCFLAGS = -std=c++11
 NVCCFLAGS += -Xcompiler "-fopenmp" # pass -fopenmp to host compiler (g++)
+NVCCFLAGS += --expt-relaxed-constexpr
+
 #NVCCFLAGS += --gpu-architecture=compute_35 --gpu-code=compute_35
 #NVCCFLAGS += --gpu-architecture=compute_60 --gpu-code=compute_60 # specify Pascal architecture
 #NVCCFLAGS += -Xptxas -v # display compilation summary
@@ -38,8 +40,8 @@ burningship: $(OBJ_FILES)
 obj/%.o: %.cpp
 	$(CC) $(LDFLAGS) $(CFLAGS) -c -o $@ $<
 
-%:%.cu
-	$(NVCC) $(LDFLAGS) $(NVCCFLAGS) $< -o $@
+cuda:
+	$(NVCC) $(LDFLAGS) $(NVCCFLAGS) burningship_gpu.cu -o burningship_gpu
 
 clean:
 	rm burningship
