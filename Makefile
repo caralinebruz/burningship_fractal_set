@@ -9,10 +9,10 @@
 # module load gcc-12.2
 OPENCV_CFLAGS := $(shell pkg-config --cflags opencv)
 OPENCV_LIBS := $(shell pkg-config --libs opencv)
-LDFLAGS := $(OPENCV_LIBS) $(OPENCV_CFLAGS) -lstdc++ -lm
+LDFLAGS := $(OPENCV_LIBS) $(OPENCV_CFLAGS) -lstdc++ -lm -fopenmp
 
 CC:=gcc
-CFLAGS:=-std=gnu++11
+CFLAGS:=-std=gnu++11 -O3
 # CFLAGS:=--std=c++14 -ggdb
 
 SRC_FILES:=$(wildcard ./*.cpp)
