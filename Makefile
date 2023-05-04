@@ -19,15 +19,14 @@ NVCC = nvcc
 NVCCFLAGS = -std=c++11
 NVCCFLAGS += -Xcompiler "-fopenmp" # pass -fopenmp to host compiler (g++)
 NVCCFLAGS += --expt-relaxed-constexpr
-
 #NVCCFLAGS += --gpu-architecture=compute_35 --gpu-code=compute_35
 #NVCCFLAGS += --gpu-architecture=compute_60 --gpu-code=compute_60 # specify Pascal architecture
 #NVCCFLAGS += -Xptxas -v # display compilation summary
 
-TARGETS = $(basename $(wildcard *.cu))
+TARGETS = $(basename $(wildcard *.cpp)) $(basename $(wildcard *.c)) $(basename $(wildcard *.cu))
 
 CC:=g++
-CFLAGS:=--std=c++14 -ggdb
+CFLAGS:=--std=c++11 -ggdb
 SRC_FILES:=$(wildcard ./*.cpp)
 OBJ_FILES:=$(patsubst %.cpp,obj/%.o,$(SRC_FILES))
 
@@ -40,8 +39,9 @@ burningship: $(OBJ_FILES)
 obj/%.o: %.cpp
 	$(CC) $(LDFLAGS) $(CFLAGS) -c -o $@ $<
 
-cuda:
-	$(NVCC) $(LDFLAGS) $(NVCCFLAGS) burningship_gpu.cu -o burningship_gpu
+%:%.cu
+	$(NVCC) $(LDFLAGS) $(NVCCFLAGS) $< -o $@
+
 
 clean:
 	rm burningship

@@ -95,11 +95,13 @@ namespace
    __global__
    void parallelburningship(int* pixelMatrix, const int rows, const int cols, const float x1, const float y1, const float scaleX, const float scaleY, const int maxIter)
    {
-     int i = blockIdx.x * blockDim.x + threadIdx.x;
-     int j = blockIdx.y * blockDim.y + threadIdx.y;
-     int idx = i + j * rows;
+     int i = blockIdx.y * blockDim.y + threadIdx.y;
+     int j = blockIdx.x * blockDim.x + threadIdx.x;
+     //int idx = j + rows * i;
+     //int idx = j + i * cols; // works, but not exact, block_dim 16
+     int idx = i + j * rows; // exact!, block_dim 16
 
-     //printf("i: %d, j: %d, idx: %d\n", i , j, idx);
+     //printf("i: %d, j: %d, idx: %d\n", i, j, idx);
    
      if (i >= rows || j >= cols) {
          return;
@@ -137,20 +139,31 @@ namespace
      if (value == maxIter) {
        grayscale_value = 0;
      } else {
+       //printf("color!\n");
        grayscale_value = std::round(sqrt(value / (float) maxIter) * 255);
      }
 
       pixelMatrix[idx] = grayscale_value;
 
-      if (idx % 200 == 0){
-        printf("idx:  %d/%d \n", idx, rows * cols);
+      /*
+      if(idx % 2 == 0) {
+        pixelMatrix[idx] = 0;
+      } else {
+        pixelMatrix[idx] = 255;
       }
+      */
+
+      /*
+      if (idx % 200 == 0){
+        printf("idx %d/%d \n", idx, rows * cols);
+      }
+      */
    }
 
   void write_pixels_to_image_file(Mat &img, int*pixelMatrix, int rows, int cols) {
     // uses openCV Mat datatype to write the pixel values and save image to disk
-    for (int i = 0; i < rows; i++) {
-      for (int j = 0; j < cols; j++) {
+    for (int i = 0; i < rows; ++i) {
+      for (int j = 0; j < cols; ++j) {
         int grayscale_int = pixelMatrix[i+j*rows];
         uchar value = (uchar) grayscale_int;
         img.ptr<uchar>(i)[j] = value;
@@ -159,25 +172,25 @@ namespace
   }
 }
 
+#define BLOCK_DIM 32
+
 int main() {
   // define the image dimensions
-  //int rows_x = 32;
-  //int cols_y = 32;
-
+  //int rows_x = 8;
+  //int cols_y = 9;
+  //int rows_x = 32; 
+  //int cols_y = 36;
   int rows_x = 9600;
   int cols_y = 10800;
   int maxIter = 500;
   int total_img_pix = rows_x * cols_y;
 
-  Timer t;
-  t.tic();
+  Timer t; t.tic();
   // allocate memory to be used for storing pixel valuess
+  int* pixelMatrix     = (int*) malloc(total_img_pix * sizeof(int));
   int* pixelMatrix_out = (int*) malloc(total_img_pix * sizeof(int));
   int* d_pixelMatrix_gpu;
-  cudaMalloc((void**)&d_pixelMatrix_gpu, total_img_pix * sizeof(int));
-
-  printf("time to malloc = %f s\n", t.toc());
-
+  
   // define the bounds of the burningship fractal domain 
   float x1 = -2.2f, x2 = 2.2f;
   float y1 = -2.2f, y2 = 2.2f;
@@ -186,22 +199,18 @@ int main() {
   float scaleX = cols_y / (x2 - x1); // ->  9600 / (2.2 - -2.2) ~= 2000
   float scaleY = rows_x / (y2 - y1); // ->  10800 / (2.2 - -2.2) ~= 2000
 
-  //! [color the set of pixels in the set vs not in the set]
-  //t.tic();
-  //sequentialburningship(pixelMatrix, rows_x, cols_y, x1, y1, scaleX, scaleY);
-  //printf("time to compute basic version = %f s\n", t.toc());
+  cudaMalloc((void**)&d_pixelMatrix_gpu, total_img_pix * sizeof(int));
+  cudaMemcpy(d_pixelMatrix_gpu, pixelMatrix, total_img_pix*sizeof(int), cudaMemcpyHostToDevice);
+  printf("time to malloc = %f s\n", t.toc());
 
-  // Render results to image file with openCV
-  //Mat burningshipImgSequential(rows_x, cols_y, CV_8U);
-  //write_pixels_to_image_file(burningshipImgSequential, pixelMatrix, rows_x, cols_y);
-  //imwrite("burningship_seq.png", burningshipImgSequential);
-  dim3 block_size(16, 16);
-  dim3 grid_size(rows_x / block_size.x, cols_y / block_size.y);
+  dim3 threadsPerBlock(BLOCK_DIM, BLOCK_DIM);
+  dim3 dimGrid((int)ceil(rows_x/threadsPerBlock.x),(int)ceil(cols_y/threadsPerBlock.y));
 
   t.tic();
-  parallelburningship<<<total_img_pix/1024 + 1, 1024>>>(d_pixelMatrix_gpu, rows_x, cols_y, x1, y1, scaleX, scaleY, maxIter);
-  //parallelburningship<<<5,5>>>(d_pixelMatrix_gpu, rows_x, cols_y, x1, y1, scaleX, scaleY, maxIter);
-  cudaMemcpyAsync(pixelMatrix_out, d_pixelMatrix_gpu, sizeof(float) * total_img_pix, cudaMemcpyDeviceToHost);
+  //parallelburningship<<<total_img_pix / 1024 + 1, total_img_pix / 1024>>> (d_pixelMatrix_gpu, rows_x, cols_y, x1, y1, scaleX, scaleY, maxIter);
+  parallelburningship<<<dimGrid, threadsPerBlock>>> (d_pixelMatrix_gpu, rows_x, cols_y, x1, y1, scaleX, scaleY, maxIter);
+  //parallelburningship<<<rows_x, cols_y>>>(d_pixelMatrix_gpu, rows_x, cols_y, x1, y1, scaleX, scaleY, maxIter);
+  cudaMemcpyAsync(pixelMatrix_out, d_pixelMatrix_gpu, sizeof(int) * total_img_pix, cudaMemcpyDeviceToHost);
   cudaDeviceSynchronize();
   printf("time to compute gpu version = %f s\n", t.toc());
   
