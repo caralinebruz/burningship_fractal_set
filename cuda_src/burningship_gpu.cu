@@ -1,7 +1,6 @@
-// load the following modules to render image
-// module load cuda-11.8
-
+// following definition is for opencv in CIMS
 #define _GLIBCXX_USE_CXX11_ABI 0
+#define BLOCK_DIM 32
 
 #include <iostream>
 #include <algorithm>
@@ -14,8 +13,6 @@
 using namespace std;
 using namespace cv;
 
-// origianl module load requires
-// module load gcc-12.2
 
 namespace
 {
@@ -97,9 +94,7 @@ namespace
    {
      int i = blockIdx.y * blockDim.y + threadIdx.y;
      int j = blockIdx.x * blockDim.x + threadIdx.x;
-     //int idx = j + rows * i;
-     //int idx = j + i * cols; // works, but not exact, block_dim 16
-     int idx = i + j * rows; // exact!, block_dim 16
+     int idx = i + j * rows;
 
      //printf("i: %d, j: %d, idx: %d\n", i, j, idx);
    
@@ -139,19 +134,10 @@ namespace
      if (value == maxIter) {
        grayscale_value = 0;
      } else {
-       //printf("color!\n");
        grayscale_value = std::round(sqrt(value / (float) maxIter) * 255);
      }
 
       pixelMatrix[idx] = grayscale_value;
-
-      /*
-      if(idx % 2 == 0) {
-        pixelMatrix[idx] = 0;
-      } else {
-        pixelMatrix[idx] = 255;
-      }
-      */
 
       /*
       if (idx % 200 == 0){
@@ -172,14 +158,9 @@ namespace
   }
 }
 
-#define BLOCK_DIM 32
 
 int main() {
   // define the image dimensions
-  //int rows_x = 8;
-  //int cols_y = 9;
-  //int rows_x = 32; 
-  //int cols_y = 36;
   int rows_x = 9600;
   int cols_y = 10800;
   int maxIter = 500;
@@ -207,9 +188,7 @@ int main() {
   dim3 dimGrid((int)ceil(rows_x/threadsPerBlock.x),(int)ceil(cols_y/threadsPerBlock.y));
 
   t.tic();
-  //parallelburningship<<<total_img_pix / 1024 + 1, total_img_pix / 1024>>> (d_pixelMatrix_gpu, rows_x, cols_y, x1, y1, scaleX, scaleY, maxIter);
   parallelburningship<<<dimGrid, threadsPerBlock>>> (d_pixelMatrix_gpu, rows_x, cols_y, x1, y1, scaleX, scaleY, maxIter);
-  //parallelburningship<<<rows_x, cols_y>>>(d_pixelMatrix_gpu, rows_x, cols_y, x1, y1, scaleX, scaleY, maxIter);
   cudaMemcpyAsync(pixelMatrix_out, d_pixelMatrix_gpu, sizeof(int) * total_img_pix, cudaMemcpyDeviceToHost);
   cudaDeviceSynchronize();
   printf("time to compute gpu version = %f s\n", t.toc());
