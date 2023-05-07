@@ -120,19 +120,6 @@ namespace
                     printf("MASK T1 contents: (row:%d col:%d) %f %f %f %f\n", i,j, my_array3[3], my_array3[2], my_array3[1], my_array3[0]);
 
 
-
-                    // // // print the MASK for debug
-                    // double my_array1[4];
-                    // _mm256_storeu_pd(my_array1, mask);
-                    // printf("MASK ORIG contents: (row:%d col:%d) %f %f %f %f\n", i,j, my_array1[3], my_array1[2], my_array1[1], my_array1[0]);
-
-
-                    // check if numbers in the mask are 0.0
-                    //if (_mm256_testz_pd(mask, mask)) {
-                        // if [0,0,0,0], then no more iterations neeeded 
-                        //break;
-                    //}
-
                     // check if you can stop iterating early because the sums are all greater than 0 already
                     __m256d zeros = _mm256_setzero_pd();
                     __m256d cmp_result = _mm256_cmp_pd(mask, zeros, _CMP_EQ_OQ);
@@ -141,7 +128,6 @@ namespace
                         printf("Stopping early at t=%d.\n", t);
                         break;
                     }
-
 
 
                     // otherwise, add the mask to the counter vec
@@ -162,13 +148,9 @@ namespace
 
                     __m256d im_intermediate = _mm256_mul_pd(zr,zi);
                     // https://stackoverflow.com/questions/63599391/find-absolute-in-avx#:~:text=So%20absolute%20value%20can%20be,mask%20for%20the%20sign%20bit.
-                    // __m256 sign_bit = _mm256_set1_ps(-0.0f);
-                    // something not working here, try this
-                    // const __m256d sign_bit = _mm256_castsi256_pd(_mm256_set1_epi64x(0x8000000000000000));
                     __m256d abs = _mm256_andnot_pd(_sign_bit, im_intermediate);
                     __m256d im_intermediate_2 = _mm256_mul_pd(abs,_two);
                     im = _mm256_add_pd(im_intermediate_2, ci_vec);
-
 
                     zr = re;
                     zi = im;
@@ -183,12 +165,6 @@ namespace
                 // ********************* Grayscale value converter
                 // when you have done the maximum number of iter for the 4 pixels OR if all 4 pixels are simply greater than 4
                 // use the result to convert to grayscale value
-
-
-                // division can only be done in single precision i guess ?
-                // __m256 counter_ps = _mm256_cvtepi32_ps(counter_vec);
-                // __m256 max_ps = _mm256_cvtepi32_ps(max_vec);
-                // __m256 result_ps = _mm256_div_ps(counter_ps, max_ps);
                 __m256d result_pd = _mm256_div_pd(counter_vec, max_vec);
 
                 // https://stackoverflow.com/questions/61461613/my-sse-avx-optimization-for-element-wise-sqrt-is-no-boosting-why
@@ -207,14 +183,20 @@ namespace
 
 
                 // weird casting issue, this is not working right now
-                __m256 my_vec_ps = _mm256_castpd_ps(grayscale_pd);
-                __m256i grayscale_int = _mm256_cvttps_epi32(my_vec_ps);
+                //__m256 my_vec_ps = _mm256_castpd_ps(grayscale_pd);
+                //__m256i grayscale_int = _mm256_cvttps_epi32(my_vec_ps);
+  
+
+                //__m128i lower_epi32 = _mm256_castsi256_si128(vec_epi32);
+                //__m128i higher_epi32 = _mm256_extractf128_si256(vec_epi32, 1);
+                //_mm_storeu_si128((__m128i *)pixelMatrix, lower_epi32);
+                //_mm_storeu_si128((__m128i *)(pixelMatrix + 4), higher_epi32);
+
 
                 // check that the result is correct so far
-                int32_t gvalues[8];
-                _mm256_storeu_si256((__m256i *)gvalues, grayscale_int);
-                printf("Grayscale INTs ==> : %i %i %i %i\n",  gvalues[3], gvalues[2], gvalues[1], gvalues[0]);
-
+                // int32_t gvalues[8];
+                // _mm256_storeu_si256((__m256i *)gvalues, grayscale_int);
+                // printf("Grayscale INTs ==> : %i %i %i %i\n",  gvalues[3], gvalues[2], gvalues[1], gvalues[0]);
 
 
                 // ok now that I have my values, I can store them back in the pixel matrix
@@ -222,11 +204,8 @@ namespace
 
                 //__m256d _j = _mm256_set_pd(j,j+1,j+2,j+3);
 
-
                 // _mm256_store_si256((__m256i*)&pixelMatrix[index], grayscale_int);
-
-                _mm256_storeu_si256((__m256i *)(pixelMatrix + index), grayscale_int);
-
+               //_mm256_storeu_si256((__m256i *)(pixelMatrix + index), grayscale_int);
 
 
                 // pixelMatrix[index + 0] = int(grayscale_int[3]);
@@ -240,10 +219,6 @@ namespace
                 printf("pixelMatrix[index+2] = %d\n", pixelMatrix[index + 1]);
                 printf("pixelMatrix[index+3] = %d\n", pixelMatrix[index + 0]);
 
-                // counter intuitive, because this would normally be i*rows + j
-                // but the true fractal is actually upside down, so we flip it
-                // and make it i+rows*j
-                // pixelMatrix[i+j*rows] = grayscale_value;
             }
 
             if (i%200 == 0){
