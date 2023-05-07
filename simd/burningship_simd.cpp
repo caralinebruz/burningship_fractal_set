@@ -23,62 +23,6 @@ using namespace cv;
 
 namespace
 {
-    //! [escape-time-algorithm]
-    // pixels that should be included in the set take a lot of iterations
-    // pixels exluded from the set take few iterations ie. they "escape" quickly
-    int burningship(const float &cr, const float &ci, const int max)
-    {
-        // convert all values to use all registers
-
-        float zr = 0;
-        float zi = 0;
-        float re = 0;
-        float im = 0;
-
-        // _two = _mm256_set1_pd(2.0);
-        // _four = _mm256_set1_pd(4.0);
-        // _max_iter = _mm256_set1_epi64x(max);
-
-        // first we need to change the code so that 
-        // every one goes to the max iterations
-        // but we return the minimum number of iterations
-        // which satisfy the criteria
-
-
-        for (int t = 0; t < max; t++)
-        {
-            if ((zr * zr + zi * zi) > 4.0f) {
-                return t;
-            }
-
-            // z = abs(z*z) + c;
-            re = zr * zr - zi * zi + cr;
-            im = fabs(zr * zi) * 2.0 + ci;
-
-            zr = re;
-            zi = im;
-        }
-        return max;
-    }
-
-
-    //! [burningship-grayscale-value]
-    // converts the number of iterations taken, to be a grayscale value
-    int burningshipFormula(const float &cr, const float &ci, const int maxIter=500) {
-
-        int value = burningship(cr, ci, maxIter);
-    
-
-        if(maxIter - value == 0)
-        {
-            return 0;
-        }
-
-        int grayscale_val = round(sqrt(value / (float) maxIter) * 255);
-        return grayscale_val;
-    }
-
-
     //! [burningship-simd]
     void simdburningship(int*pixelMatrix, int rows, int cols, const float x1, const float y1, const float scaleX, const float scaleY)
     {
