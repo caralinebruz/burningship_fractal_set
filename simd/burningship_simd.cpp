@@ -34,22 +34,37 @@ namespace
         const __m256 _twofivefive = _mm256_set1_ps(255.0);
         const __m256d sign_bit = _mm256_castsi256_pd(_mm256_set1_epi64x(0x8000000000000000));
 
+        // for getting the cr values
+        const __m256d _x_scale = _mm256_set1_pd(scaleX);
+        const __m256d _x1 = _mm256_set1_pd(x1);
+
 
         for (int i = 0; i < rows; i++)
         {
+            // ci = y0 = i / scaleY + y1
+            double y0 = i / scaleY + y1;
+            __m256d ci_vec = _mm256_set1_pd(y0);
+
             // increment in groups of 4 as we will be putting 4 packed doubles in the register
-            for (int j = 0; j < cols; j+=4)
+            for (int j = 0; j < cols; j += 4)
             {
+                __m256d _j = _mm256_set_pd(j,j+1,j+2,j+3);
+
+                // get cr = j / scaleX + x1
+                __m256d _cr_inter = _mm256_div_pd(_j,_x_scale);
+                __m256d cr_vec = _mm256_add_pd(_cr_inter,_x1);
+
 
                 // for each pixel in our image, figure out what coords that pixel
                 // corresponds to in the domain of our problem
-                float x0 = j / scaleX + x1;
-                float y0 = i / scaleY + y1;
+                // double x0 = j / scaleX + x1;
+                //double y0 = i / scaleY + y1;
+
 
                 // real is the x-axis
-                float cr = x0;
+                // double cr = x0;
                 // imaginary is the y-axis
-                float ci = y0;
+               // double ci = y0;
 
 
                 // instead of calling separate functions, do everything in here
@@ -63,8 +78,13 @@ namespace
                 __m256d im = _mm256_set1_pd(0.0);
 
                 // make a vector to store copies of the starting c values of the loop
-                __m256d cr_vec = _mm256_set1_pd(cr); // 4 copies of cr
-                __m256d ci_vec = _mm256_set1_pd(ci); // 4 copies of ci
+                // __m256d cr_vec = _mm256_set1_pd(cr); // 4 copies of cr
+                // __m256d ci_vec = _mm256_set1_pd(ci); // 4 copies of ci
+
+
+                //double my_array[4];
+                //_mm256_storeu_pd(my_array, cr_vec);
+                //printf("Vector contents: (row:%d col:%d) %f %f %f %f\n", i,j, my_array[3], my_array[2], my_array[1], my_array[0]);
 
                 // also make vectors to store the intermediate counter for num iterations taken
                 __m256i counter_vec = _mm256_set1_epi32(0); // initially, each pixel has 0 iterations --- must be INTEGER
@@ -197,7 +217,13 @@ namespace
 
 
                 // ok now that I have my values, I can store them back in the pixel matrix
-                _mm256_store_si256((__m256i*)pixelMatrix, grayscale_int);
+                int index = i+j*rows;
+                // _mm256_store_si256((__m256i*)&pixelMatrix[index], grayscale_int);
+
+                pixelMatrix[index + 0] = int(grayscale_int[3]);
+                pixelMatrix[index + 1] = int(grayscale_int[2]);
+                pixelMatrix[index + 2] = int(grayscale_int[1]);
+                pixelMatrix[index + 3] = int(grayscale_int[0]);
 
                 // counter intuitive, because this would normally be i*rows + j
                 // but the true fractal is actually upside down, so we flip it
@@ -221,6 +247,8 @@ namespace
                 int grayscale_int = pixelMatrix[i+j*rows];
                 uchar value = (uchar) grayscale_int;
                 img.ptr<uchar>(i)[j] = value;
+
+                // printf("%d ", value);
             }
         }    
     }
@@ -238,6 +266,7 @@ int main()
     t.tic();
     // allocate memory to be used for storing pixel valuess
     int* pixelMatrix = (int*) aligned_alloc(32, rows_x * cols_y * sizeof(int));
+    memset(pixelMatrix, 0, rows_x * cols_y * sizeof(int));
     printf("time to aligned malloc = %f s\n", t.toc());
 
 
@@ -257,9 +286,9 @@ int main()
 
 
     // Render results to image file with openCV
-    //Mat burningshipImg(rows_x, cols_y, CV_8U);
-   // write_pixels_to_image_file(burningshipImg, pixelMatrix, rows_x, cols_y);
-    //imwrite("burningship_simd.png", burningshipImg);
+    Mat burningshipImg(rows_x, cols_y, CV_8U);
+    write_pixels_to_image_file(burningshipImg, pixelMatrix, rows_x, cols_y);
+    imwrite("burningship_simd.png", burningshipImg);
 
     free(pixelMatrix);
 
