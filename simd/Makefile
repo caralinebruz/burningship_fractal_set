@@ -9,9 +9,9 @@
 # module loac gcc-12.2
 OPENCV_CFLAGS := $(shell pkg-config --cflags opencv)
 OPENCV_LIBS := $(shell pkg-config --libs opencv)
-LDFLAGS := $(OPENCV_LIBS) $(OPENCV_CFLAGS) -lstdc++ -lm -mavx
+LDFLAGS := $(OPENCV_LIBS) $(OPENCV_CFLAGS) -lstdc++ -lm 
 
-CC:=gcc
+CC:=gcc -mavx -march=native
 CFLAGS:=-std=gnu++11
 SRC_FILES:=$(wildcard ./*.cpp)
 OBJ_FILES:=$(patsubst %.cpp,obj/%.o,$(SRC_FILES))

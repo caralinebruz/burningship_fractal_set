@@ -31,13 +31,14 @@ namespace
         const __m256d _two = _mm256_set1_pd(2.0);
         const __m256d _four = _mm256_set1_pd(4.0);
         const __m256d _zero = _mm256_set1_pd(0.0);
-        const __m256d _twofivefive = _mm256_set1_pd(255.0);
+        const __m256 _twofivefive = _mm256_set1_ps(255.0);
         const __m256d sign_bit = _mm256_castsi256_pd(_mm256_set1_epi64x(0x8000000000000000));
 
 
         for (int i = 0; i < rows; i++)
         {
-            for (int j = 0; j < cols; j++)
+            // increment in groups of 4 as we will be putting 4 packed doubles in the register
+            for (int j = 0; j < cols; j+=4)
             {
 
                 // for each pixel in our image, figure out what coords that pixel
@@ -50,8 +51,6 @@ namespace
                 // imaginary is the y-axis
                 float ci = y0;
 
-                // get the grayscale value
-                // int grayscale_value = burningshipFormula(cr,ci);
 
                 // instead of calling separate functions, do everything in here
                 // it will enable me to store the vectorized result
@@ -73,6 +72,7 @@ namespace
                 // try this later, maybe enable me to exit early?
                 __m256i max_vec = _mm256_set1_epi32(max_iter); // epi32 for INTEGER
 
+                // ESCAPE TIME LOOP
                 // start the main loop for this pixel
                 for (int t = 0; t < max_iter; t++) {
 
@@ -90,8 +90,8 @@ namespace
                     // check if all of the four pixels sum's are NOT less than zero (they are all false)
                     if (_mm256_testz_pd(mask, mask)) {
 
-                        // then what is done here? 
-                        // no more iterations, the counter vec is OK to be used by the output
+                        // if [0,0,0,0], then no more iterations neeeded 
+                        // the counter vec is OK to be used by the output
                         break;
                     }
 
@@ -102,6 +102,8 @@ namespace
                     // ^ mask needs to be casted from integer to 32 bit
                     // omg, then cast back to int
 
+
+                    // *********************
                     // then, do the fractal computation for this single iteration
                     // z = abs(z * z) + c;
                     // re = zr * zr - zi * zi + cr;
@@ -116,40 +118,86 @@ namespace
                     __m256d abs = _mm256_andnot_pd(sign_bit, im_intermediate);
                     __m256d im_intermediate_2 = _mm256_mul_pd(abs,_two);
                     im = _mm256_add_pd(im_intermediate_2, ci_vec);
-                        // come back to this
+
+                    // ^ this should have worked. need to check.
 
                     zr = re;
                     zi = im;
                 }
+                // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+                // ********************* Grayscale value converter
                 // when you have done the maximum number of iter for the 4 pixels OR if all 4 pixels are simply greater than 4
                 // use the result to convert to grayscale value
 
+
+
+
+                // SKIP THIS FOR NOW , MAY NOT AFFECT RESULT
                 // make a mask to compare each of the four values to the max_iter
-                __m256d max_minus_value = _mm256_sub_pd(max_vec, counter_vec);
-                // ^ this should return a result like [499,10,1,213]
+                // __m256i max_minus_value = _mm256_sub_epi32(max_vec, counter_vec);
+                // ^ this should return num iter taken ex: [499,10,1,213]
 
-                __m256d mask_zero_grayscale = _mm256_cmp_pd(max_minus_value, _zero, _CMP_EQ_OQ);
-                // ^ this should provide a result like [1,0,0,1] for (true, false, false, true)
+                // try with _CMP_NEQ_UQ predicate
+                // __m256d mask_grayscale_is_zero = _mm256_cmp_pd(max_minus_value, _zero, _CMP_NEQ_UQ);
+                 // ^ this should provide ex. [0,1,1,0] for (false, true, true, false)
+                 // ^ for this one, it produces 0 (false) for where max-value != 0
 
-                // if it was true, then the grayscale value should be 0
-                // if it was false, then the grayscale value should be computed like the formula
+                // we want the grayscale value should be 0, when max_iter - value == 0
+                // if max_minus_value ==0, then grayscale value should be 0.
+                // so, using NEQ will provide us 0 
+                // END OF SKIP
 
-                // i can try to multiply the mask by the calculation. this will keep 0's in tact
-                __m256d values = _mm256_div_pd(counter_vec, max_vec);
+
+
+                // ***
+                // do the valculation
+                // int grayscale_val = round(sqrt (value / (float) maxIter) * 255);
+                // 
+
+                // make values_1 a double
+                // but you have to cast each vector to double first
+                // cast 32 bit int to 32 bit pd _mm256_cvtepi32_pd
+                // should be fine to use single precision for now since idk how to do it for double
+                // may need to check the result for mixing single precision and double
+                // not sure how the register maps them , if it does, correctly
+                //  __m256 values_1 = _mm256_div_ps(_mm256_cvtepi32_ps(counter_vec), _mm256_cvtepi32_ps(max_vec));
+
+
+                // division can only be done in single precision i guess ?
+                __m256 counter_ps = _mm256_cvtepi32_ps(counter_vec);
+                __m256 max_ps = _mm256_cvtepi32_ps(max_vec);
+                __m256 result_ps = _mm256_div_ps(counter_ps, max_ps);
+
+                // convert it back to a packed INT
+                //__m256i result_int = _mm256_cvtps_epi32(result_ps);
+
+                __m256 values_ps = _mm256_sqrt_ps(result_ps);
+                __m256 values_2 = _mm256_mul_ps(values_ps, _twofivefive);
 
                 // https://stackoverflow.com/questions/61461613/my-sse-avx-optimization-for-element-wise-sqrt-is-no-boosting-why
-                values = _mm256_sqrt_pd(values);
-                __m256d values_2 = _mm256_mul_pd(values, _twofivefive);
+                // values_1 = _mm256_sqrt_ps(values_1);
+                //__m256 values_2 = _mm256_mul_ps(values_1, _twofivefive);
 
                 // then i need to round this to the nearest integer
 
                 // https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_round_pd&ig_expand=6159
-                __m256d grayscale_values = _mm256_round_pd(values_2,_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC);
+                __m256 grayscale_ps = _mm256_round_ps(values_2, _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC);
+                
+
+                // convert it back to a packed INT
+                __m256i grayscale_int = _mm256_cvtps_epi32(grayscale_ps);
+
+                
+                // __m256i grayscales_int = _mm256_cvtps_epi32(grayscale_values);
+
+                // finally, multiply the multiply grayscale by the values
+                //__m256d values = _mm256_mul_pd(mask_grayscale_is_zero, grayscales_int);
+                // ***
 
 
                 // ok now that I have my values, I can store them back in the pixel matrix
-
+                _mm256_store_si256((__m256i*)pixelMatrix, grayscale_int);
 
                 // counter intuitive, because this would normally be i*rows + j
                 // but the true fractal is actually upside down, so we flip it
@@ -189,7 +237,7 @@ int main()
     Timer t;
     t.tic();
     // allocate memory to be used for storing pixel valuess
-    int* pixelMatrix = (int*) aligned_alloc(rows_x * cols_y * sizeof(int));
+    int* pixelMatrix = (int*) aligned_alloc(32, rows_x * cols_y * sizeof(int));
     printf("time to aligned malloc = %f s\n", t.toc());
 
 
@@ -213,7 +261,7 @@ int main()
    // write_pixels_to_image_file(burningshipImg, pixelMatrix, rows_x, cols_y);
     //imwrite("burningship_simd.png", burningshipImg);
 
-    aligned_free(pixelMatrix);
+    free(pixelMatrix);
 
     return EXIT_SUCCESS;
 }
