@@ -55,6 +55,9 @@ namespace
             //for (int j = 7604; j < 7612; j += 4)
             {
                 __m256d _j = _mm256_set_pd(j,j+1,j+2,j+3);
+                // double j_array[4];
+                // _mm256_storeu_pd(j_array, _j);
+                // printf("_j contents:  %f %f %f %f\n", j_array[3], j_array[2], j_array[1], j_array[0]);
 
                 // get cr (cr will hold diff values across the register)
                 // cr = j / scaleX + x1
