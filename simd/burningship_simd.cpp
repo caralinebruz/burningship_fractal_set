@@ -41,8 +41,8 @@ namespace
         int max_iter = 500;
 
 
-        //for (int i = 0; i < rows; i++)
-        for (int i = 1438; i < 1442; i++)
+        for (int i = 0; i < rows; i++)
+        // for (int i = 1438; i < 1442; i++)
         {
             // get ci (ci will hold same values across the register because we go row by row)
             // ci = i / scaleY + y1
@@ -51,8 +51,8 @@ namespace
 
 
 
-            // for (int j = 0; j < cols; j += 4)
-            for (int j = 7604; j < 7612; j += 4)
+            for (int j = 0; j < cols; j += 4)
+            //for (int j = 7604; j < 7612; j += 4)
             {
                 __m256d _j = _mm256_set_pd(j,j+1,j+2,j+3);
 
@@ -67,8 +67,8 @@ namespace
                 __m256d re = _mm256_set1_pd(0.0);
                 __m256d im = _mm256_set1_pd(0.0);
 
-                double my_array0[4];
-                _mm256_storeu_pd(my_array0, cr_vec);
+                //double my_array0[4];
+                //_mm256_storeu_pd(my_array0, cr_vec);
                 //printf("Vector contents: (row:%d col:%d) %f %f %f %f\n", i,j, my_array0[3], my_array0[2], my_array0[1], my_array0[0]);
 
                 // store the num iterations taken by each pixel
@@ -84,11 +84,9 @@ namespace
                 // start the main loop for this pixel
                 for (int t = 0; t < max_iter; t++) {
 
-                    if (t > 2) {
-
-                        printf("t %d, row: %d col: %d \n", t, i, j);
-
-                    }
+                   // if (t > 2) {
+                   //     printf("t %d, row: %d col: %d \n", t, i, j);
+                    //}
 
                     // first generate the stopping criteria
                     // (zr * zr + zi * zi) > 4.0
@@ -97,9 +95,9 @@ namespace
                     __m256d sum = _mm256_add_pd(zr2, zi2);
 
                     // print the SUM for debug
-                    double my_array[4];
-                    _mm256_storeu_pd(my_array, sum);
-                    printf("SUM contents: (row:%d col:%d) %f %f %f %f\n", i,j, my_array[3], my_array[2], my_array[1], my_array[0]);
+                    //double my_array[4];
+                    //_mm256_storeu_pd(my_array, sum);
+                    //printf("SUM contents: (row:%d col:%d) %f %f %f %f\n", i,j, my_array[3], my_array[2], my_array[1], my_array[0]);
                     // ok the sum is working
 
                     // create a mask to check each element in the vector for the condition
@@ -115,9 +113,9 @@ namespace
 
                     // -nan --> 1
                     mask = _mm256_and_pd(mask, _mm256_set1_pd(1.0));
-                    double my_array3[4];
-                    _mm256_storeu_pd(my_array3, mask);
-                    printf("MASK T1 contents: (row:%d col:%d) %f %f %f %f\n", i,j, my_array3[3], my_array3[2], my_array3[1], my_array3[0]);
+                    //double my_array3[4];
+                    //_mm256_storeu_pd(my_array3, mask);
+                    //printf("MASK T1 contents: (row:%d col:%d) %f %f %f %f\n", i,j, my_array3[3], my_array3[2], my_array3[1], my_array3[0]);
 
 
                     // check if you can stop iterating early because the sums are all greater than 0 already
@@ -125,7 +123,7 @@ namespace
                     __m256d cmp_result = _mm256_cmp_pd(mask, zeros, _CMP_EQ_OQ);
                     int test_all_zeros = _mm256_testc_pd(cmp_result, _mm256_set1_pd(-1.0));
                     if (test_all_zeros == 1) {
-                        printf("Stopping early at t=%d.\n", t);
+                        //printf("Stopping early at t=%d.\n", t);
                         break;
                     }
 
@@ -134,6 +132,7 @@ namespace
                     // pixels which have "escaped" by now should not accumulate more num_iterations
                     // pixels which have not "escaped" by now should +1 to the num of iterations needed to satisfy
                     counter_vec = _mm256_add_pd(counter_vec, mask);
+                    
                     // print the COUNTER AGG for debug
                     // double my_array7[4];
                     // _mm256_storeu_pd(my_array7, counter_vec);
@@ -157,9 +156,9 @@ namespace
                 }
 
                 // print the COUNTER AGG for debug
-                double my_array7[4];
-                _mm256_storeu_pd(my_array7, counter_vec);
-                printf("Counter contents: (row:%d col:%d) %f %f %f %f\n", i,j, my_array7[3], my_array7[2], my_array7[1], my_array7[0]);
+                //double my_array7[4];
+               // _mm256_storeu_pd(my_array7, counter_vec);
+               // printf("Counter contents: (row:%d col:%d) %f %f %f %f\n", i,j, my_array7[3], my_array7[2], my_array7[1], my_array7[0]);
                 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
                 // ********************* Grayscale value converter
@@ -175,49 +174,29 @@ namespace
                 // https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_mm256_round_pd&ig_expand=6159
                 __m256d grayscale_pd = _mm256_round_pd(values_mult, _MM_FROUND_TO_NEAREST_INT);
 
-                // display the GRAYSCALE values
-                double my_array10[4];
-                _mm256_storeu_pd(my_array10, grayscale_pd);
-                printf("Grayscales ==> : %f %f %f %f\n",  my_array10[3], my_array10[2], my_array10[1], my_array10[0]);
 
-
-
-                // weird casting issue, this is not working right now
-                //__m256 my_vec_ps = _mm256_castpd_ps(grayscale_pd);
-                //__m256i grayscale_int = _mm256_cvttps_epi32(my_vec_ps);
-  
-
-                //__m128i lower_epi32 = _mm256_castsi256_si128(vec_epi32);
-                //__m128i higher_epi32 = _mm256_extractf128_si256(vec_epi32, 1);
-                //_mm_storeu_si128((__m128i *)pixelMatrix, lower_epi32);
-                //_mm_storeu_si128((__m128i *)(pixelMatrix + 4), higher_epi32);
-
-
-                // check that the result is correct so far
-                // int32_t gvalues[8];
-                // _mm256_storeu_si256((__m256i *)gvalues, grayscale_int);
-                // printf("Grayscale INTs ==> : %i %i %i %i\n",  gvalues[3], gvalues[2], gvalues[1], gvalues[0]);
 
 
                 // ok now that I have my values, I can store them back in the pixel matrix
                 int index = i+j*rows;
 
-                //__m256d _j = _mm256_set_pd(j,j+1,j+2,j+3);
-
-                // _mm256_store_si256((__m256i*)&pixelMatrix[index], grayscale_int);
-               //_mm256_storeu_si256((__m256i *)(pixelMatrix + index), grayscale_int);
-
-
-                // pixelMatrix[index + 0] = int(grayscale_int[3]);
-                // pixelMatrix[index + 1] = int(grayscale_int[2]);
-                // pixelMatrix[index + 2] = int(grayscale_int[1]);
-                // pixelMatrix[index + 3] = int(grayscale_int[0]);
+                // this part is suspect. there is def a better way to insert pd to ints
+                double grayscales_to_insert[4];
+                _mm256_storeu_pd(grayscales_to_insert, grayscale_pd);
 
 
-                printf("pixelMatrix[index+0] = %d\n", pixelMatrix[index + 3]);
-                printf("pixelMatrix[index+1] = %d\n", pixelMatrix[index + 2]);
-                printf("pixelMatrix[index+2] = %d\n", pixelMatrix[index + 1]);
-                printf("pixelMatrix[index+3] = %d\n", pixelMatrix[index + 0]);
+                // inverted, dont know why.
+                pixelMatrix[index + 0] = int(grayscales_to_insert[3]);
+                pixelMatrix[index + 1] = int(grayscales_to_insert[2]);
+                pixelMatrix[index + 2] = int(grayscales_to_insert[1]);
+                pixelMatrix[index + 3] = int(grayscales_to_insert[0]);
+
+                /*
+                printf("pixelMatrix[index+0] = %d\n", pixelMatrix[index + 0]);
+                printf("pixelMatrix[index+1] = %d\n", pixelMatrix[index + 1]);
+                printf("pixelMatrix[index+2] = %d\n", pixelMatrix[index + 2]);
+                printf("pixelMatrix[index+3] = %d\n", pixelMatrix[index + 3]);
+                */
 
             }
 
@@ -237,17 +216,6 @@ namespace
                 int grayscale_int = pixelMatrix[i+j*rows];
                 uchar value = (uchar) grayscale_int;
                 img.ptr<uchar>(i)[j] = value;
-
-                // if (1438<i<1442) {
-
-                //     if (7604<j<7612) {
-                //             printf("%d ", value);
-                //     }
-                // }
-
-
-
-               // printf("%d ", value);
             }
         }    
     }
