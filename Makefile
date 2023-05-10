@@ -19,11 +19,12 @@ OBJ_FILES:=$(patsubst %.cpp,obj/%.o,$(SRC_FILES))
 all: burningship
 
 burningship: $(OBJ_FILES)
-	$(CC) $(LDFLAGS) -o $@ $^
+ 			$(CC) $(LDFLAGS) -o $@ $^
 
-obj/%.o: %.cpp
-	$(CC) $(LDFLAGS) $(CFLAGS) -c -o $@ $<
 
-clean:
-	rm burningship
-	rm obj/*.o
+ 	obj/%.o: %.cpp
+ 			$(CC) $(LDFLAGS) $(CFLAGS) -c -o $@ $<
+
+	clean:
+			rm burningship
+ 			rm obj/*.o
