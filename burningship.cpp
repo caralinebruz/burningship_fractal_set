@@ -3,7 +3,6 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include "utils.h"
-#include "omp.h"
 
 using namespace std;
 using namespace cv;
@@ -87,53 +86,6 @@ namespace
         }
     }
 
-    //! [burningship-parallel]
-    void parallelburningship(int*pixelMatrixOmp, int rows, int cols, const float x1, const float y1, const float scaleX, const float scaleY)
-    {
-        int p = omp_get_num_threads();
-        int t = omp_get_thread_num();
-        int NTHREADS = 6; // can try to tune it w diff threads
-
-        #pragma omp parallel for num_threads(NTHREADS) collapse(2)  // try with collapse 
-        for (int i = 0; i < rows; i++)
-        {
-
-            // int thread_num = omp_get_thread_num();
-            // printf("Thread %d \n", thread_num);
-
-            for (int j = 0; j < cols; j++)
-            {
-
-                // for each pixel in our image, figure out what coords that pixel
-                // corresponds to in the domain of our problem
-                float x0 = j / scaleX + x1;
-                float y0 = i / scaleY + y1;
-
-                // real is the x-axis
-                float cr = x0;
-                // imaginary is the y-axis
-                float ci = y0;
-
-                // get the grayscale value
-                int grayscale_value = burningshipFormula(cr,ci);
-
-
-                // counter intuitive, because this would normally be i*rows + j
-                // but the true fractal is actually upside down, so we flip it
-                // and make it i+rows*j
-                pixelMatrixOmp[i+j*rows] = grayscale_value;
-            }
-
-            // unable to run the IF statement with using collapse
-            // if (i%200 == 0){
-            //     printf("thread: %d printing row %d/%d\n", p, i, rows);
-            //     // printf("row %d/%d \n", i, rows);
-            // }
-
-        }
-    }
-
-
     void write_pixels_to_image_file(Mat &img, int*pixelMatrix, int rows, int cols) {
         // uses openCV Mat datatype to write the pixel values and save image to disk
         for (int i = 0; i < rows; i++)
@@ -173,7 +125,7 @@ int main()
 
 
     //! [color the set of pixels in the set vs not in the set]
-    printf("Starting with sequential version, will run parallel version next.\n");
+    printf("Starting with sequential version.\n");
     t.tic();
     sequentialburningship(pixelMatrix, rows_x, cols_y, x1, y1, scaleX, scaleY);
     printf("time to compute basic version = %f s\n", t.toc());
@@ -185,15 +137,7 @@ int main()
     imwrite("burningship.png", burningshipImgSequential);
 
 
-    int* pixelMatrixOmp = (int*) malloc(rows_x * cols_y * sizeof(int));
-    double tt = omp_get_wtime();
-    parallelburningship(pixelMatrixOmp, rows_x, cols_y, x1, y1, scaleX, scaleY);
-    printf("time to compute parallel version = %f s\n", omp_get_wtime() - tt);
-
-
     free(pixelMatrix);
-    free(pixelMatrixOmp);
-
 
     return EXIT_SUCCESS;
 }
