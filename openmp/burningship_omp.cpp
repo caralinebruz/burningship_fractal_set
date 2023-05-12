@@ -90,16 +90,17 @@ namespace
     //! [burningship-parallel]
     void parallelburningship(int*pixelMatrixOmp, int rows, int cols, const float x1, const float y1, const float scaleX, const float scaleY)
     {
-        int p = omp_get_num_threads();
-        int t = omp_get_thread_num();
-        int NTHREADS = 6; // can try to tune it w diff threads
+        // int p = omp_get_num_threads();
+        // int t = omp_get_thread_num();
+        int NTHREADS = 1; // can try to tune it w diff threads
 
-        #pragma omp parallel for num_threads(NTHREADS) collapse(2)  // try with collapse 
+        // #pragma omp parallel for num_threads(NTHREADS) collapse(2)  // try with collapse 
+        #pragma omp parallel for schedule(dynamic) num_threads(NTHREADS)
         for (int i = 0; i < rows; i++)
         {
 
-            // int thread_num = omp_get_thread_num();
-            // printf("Thread %d \n", thread_num);
+            //int thread_num = omp_get_thread_num();
+            //printf("Thread %d \n", thread_num);
 
             for (int j = 0; j < cols; j++)
             {
@@ -125,10 +126,11 @@ namespace
             }
 
             // unable to run the IF statement with using collapse
-            // if (i%200 == 0){
-            //     printf("thread: %d printing row %d/%d\n", p, i, rows);
-            //     // printf("row %d/%d \n", i, rows);
-            // }
+            if (i%200 == 0){
+                printf("thread %d of %d printing row: %d/%d \n", omp_get_thread_num(), omp_get_num_threads(), i, rows);
+                // printf("thread: %d printing row %d/%d\n", p, i, rows);
+                // printf("row %d/%d \n", i, rows);
+            }
 
         }
     }
@@ -172,17 +174,17 @@ int main()
     float scaleY = rows_x / (y2 - y1); // ->  10800 / (2.2 - -2.2) ~= 2000
 
 
-    //! [color the set of pixels in the set vs not in the set]
-    printf("Starting with sequential version, will run parallel version next.\n");
-    t.tic();
-    sequentialburningship(pixelMatrix, rows_x, cols_y, x1, y1, scaleX, scaleY);
-    printf("time to compute basic version = %f s\n", t.toc());
+    // //! [color the set of pixels in the set vs not in the set]
+    // printf("Starting with sequential version, will run parallel version next.\n");
+    // t.tic();
+    // sequentialburningship(pixelMatrix, rows_x, cols_y, x1, y1, scaleX, scaleY);
+    // printf("time to compute basic version = %f s\n", t.toc());
 
 
-    // Render results to image file with openCV
-    Mat burningshipImgSequential(rows_x, cols_y, CV_8U);
-    write_pixels_to_image_file(burningshipImgSequential, pixelMatrix, rows_x, cols_y);
-    imwrite("burningship.png", burningshipImgSequential);
+    // // Render results to image file with openCV
+    // Mat burningshipImgSequential(rows_x, cols_y, CV_8U);
+    // write_pixels_to_image_file(burningshipImgSequential, pixelMatrix, rows_x, cols_y);
+    // imwrite("burningship.png", burningshipImgSequential);
 
 
     int* pixelMatrixOmp = (int*) malloc(rows_x * cols_y * sizeof(int));
@@ -190,8 +192,13 @@ int main()
     parallelburningship(pixelMatrixOmp, rows_x, cols_y, x1, y1, scaleX, scaleY);
     printf("time to compute parallel version = %f s\n", omp_get_wtime() - tt);
 
+    // Render results to image file with openCV
+    Mat burningshipImgOmp(rows_x, cols_y, CV_8U);
+    write_pixels_to_image_file(burningshipImgOmp, pixelMatrixOmp, rows_x, cols_y);
+    imwrite("burningship_omp.png", burningshipImgOmp);
 
-    free(pixelMatrix);
+
+    // free(pixelMatrix);
     free(pixelMatrixOmp);
 
 
