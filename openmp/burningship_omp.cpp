@@ -92,11 +92,11 @@ namespace
     {
         // int p = omp_get_num_threads();
         // int t = omp_get_thread_num();
-        int NTHREADS = 4; // can try to tune it w diff threads
+        int NTHREADS = 32; // can try to tune it w diff threads
 
         // #pragma omp parallel for num_threads(NTHREADS) collapse(2)  // try with collapse 
-        // #pragma omp parallel for schedule(dynamic) num_threads(NTHREADS)
-        #pragma omp parallel for num_threads(NTHREADS)
+        #pragma omp parallel for schedule(dynamic) num_threads(NTHREADS)
+        // #pragma omp parallel for num_threads(NTHREADS)
         for (int i = 0; i < rows; i++)
         {
 
