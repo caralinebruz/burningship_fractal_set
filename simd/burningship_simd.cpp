@@ -26,8 +26,12 @@ namespace
     //! [burningship-simd]
     void simdburningship(int*pixelMatrix, int rows, int cols, const float x1, const float y1, const float scaleX, const float scaleY)
     {
+        int max_iter = 500;
+        const __m256i _max_iter = _mm256_set1_epi64x(500);
+        const __m256d max_vec = _mm256_set1_pd(500.0); // epi32 for INTEGER, lets try it with pd
 
         // define constants out here
+        const __m256d _one = _mm256_set1_pd(1.0);
         const __m256d _two = _mm256_set1_pd(2.0);
         const __m256d _four = _mm256_set1_pd(4.0);
         const __m256d _zero = _mm256_set1_pd(0.0);
@@ -38,7 +42,9 @@ namespace
         const __m256d _x_scale = _mm256_set1_pd(scaleX);
         const __m256d _x1 = _mm256_set1_pd(x1);
 
-        int max_iter = 500;
+
+
+
 
 
         for (int i = 0; i < rows; i++)
@@ -47,12 +53,13 @@ namespace
             // get ci (ci will hold same values across the register because we go row by row)
             // ci = i / scaleY + y1
             double y0 = i / scaleY + y1;
+
             __m256d ci_vec = _mm256_set1_pd(y0);
 
 
 
             for (int j = 0; j < cols; j += 4)
-            //for (int j = 7604; j < 7612; j += 4)
+            // for (int j = 7604; j < 7612; j += 4)
             {
                 __m256d _j = _mm256_set_pd(j,j+1,j+2,j+3);
                 // double j_array[4];
@@ -78,7 +85,7 @@ namespace
                 __m256d counter_vec = _mm256_set1_pd(0.0); // initially, each pixel has 0 iterations --- must be INTEGER, lets make it pd
 
                 // try this later, maybe enable me to exit early?
-                __m256d max_vec = _mm256_set1_pd(max_iter); // epi32 for INTEGER, lets try it with pd
+                //__m256d max_vec = _mm256_set1_pd(max_iter); // epi32 for INTEGER, lets try it with pd
 
 
 
@@ -104,8 +111,9 @@ namespace
                     // ok the sum is working
 
                     // create a mask to check each element in the vector for the condition
-                    __m256d compare = _mm256_set1_pd(4.0);
-                    __m256d mask = _mm256_cmp_pd(sum, compare, _CMP_LT_OQ); // do not modify the predicate it's working
+                    // __m256d compare = _mm256_set1_pd(4.0);
+                    // __m256d mask = _mm256_cmp_pd(sum, compare, _CMP_LT_OQ); // do not modify the predicate it's working
+                    __m256d mask = _mm256_cmp_pd(sum, _four, _CMP_LT_OQ);
                     // returns:
                     //          -nan when sum < 4
                     //          0 when sum > 4
@@ -115,20 +123,39 @@ namespace
                     //          0 when sum > 4
 
                     // -nan --> 1
-                    mask = _mm256_and_pd(mask, _mm256_set1_pd(1.0));
-                    //double my_array3[4];
-                    //_mm256_storeu_pd(my_array3, mask);
-                    //printf("MASK T1 contents: (row:%d col:%d) %f %f %f %f\n", i,j, my_array3[3], my_array3[2], my_array3[1], my_array3[0]);
+                    mask = _mm256_and_pd(mask, _one);
 
+                    /*
+                    double my_array3[4];
+                    _mm256_storeu_pd(my_array3, mask);
+                    printf("MASK T1 contents: (row:%d col:%d) %f %f %f %f\n", i,j, my_array3[3], my_array3[2], my_array3[1], my_array3[0]);
+                    // ^ produces [1.0, 1.0, 0.0, 1.0] ==> 0.0 means {sum > 4} already. 1.0 means {sum < 1} 
+                    */
 
-                    // check if you can stop iterating early because the sums are all greater than 0 already
-                    __m256d zeros = _mm256_setzero_pd();
-                    __m256d cmp_result = _mm256_cmp_pd(mask, zeros, _CMP_EQ_OQ);
-                    int test_all_zeros = _mm256_testc_pd(cmp_result, _mm256_set1_pd(-1.0));
-                    if (test_all_zeros == 1) {
-                        //printf("Stopping early at t=%d.\n", t);
+                    // each element in _cmp_result will be -nan (all bits set) 
+                    //      if the corresponding element in mask is zero, 
+                    // and zero (all bits clear) otherwise
+                   __m256d _cmp_result = _mm256_cmp_pd(mask, _zero, _CMP_EQ_OQ);
+
+                    int mask2_int = _mm256_movemask_pd(_cmp_result);
+                    // So, if all elements in mask are zero, mask2_int will be 15, 
+                    // and if any element in mask is nonzero, the corresponding bit in mask2_int will be 0.
+
+                    if (mask2_int > 0) {
+                        // so break when mask is 15 (all values in the original mask are 0000)
                         break;
                     }
+
+
+
+
+
+                    
+                    // int test_all_zeros = _mm256_testc_pd(_cmp_result, _mm256_set1_pd(-1.0));
+                    // if (test_all_zeros == 1) {
+                    // //     //printf("Stopping early at t=%d.\n", t);
+                    //      break;
+                    // }
 
 
                     // otherwise, add the mask to the counter vec
@@ -179,13 +206,13 @@ namespace
 
 
 
-
+                
                 // ok now that I have my values, I can store them back in the pixel matrix
                 int index = i+j*rows;
 
                 // this part is suspect. there is def a better way to insert pd to ints
                 double grayscales_to_insert[4];
-                _mm256_storeu_pd(grayscales_to_insert, grayscale_pd);
+                _mm256_store_pd(grayscales_to_insert, grayscale_pd);
 
 
                 // inverted, dont know why.
@@ -193,13 +220,8 @@ namespace
                 pixelMatrix[index + 1] = int(grayscales_to_insert[2]);
                 pixelMatrix[index + 2] = int(grayscales_to_insert[1]);
                 pixelMatrix[index + 3] = int(grayscales_to_insert[0]);
+                
 
-                /*
-                printf("pixelMatrix[index+0] = %d\n", pixelMatrix[index + 0]);
-                printf("pixelMatrix[index+1] = %d\n", pixelMatrix[index + 1]);
-                printf("pixelMatrix[index+2] = %d\n", pixelMatrix[index + 2]);
-                printf("pixelMatrix[index+3] = %d\n", pixelMatrix[index + 3]);
-                */
 
             }
 

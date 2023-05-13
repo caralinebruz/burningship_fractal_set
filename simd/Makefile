@@ -11,7 +11,7 @@ OPENCV_CFLAGS := $(shell pkg-config --cflags opencv)
 OPENCV_LIBS := $(shell pkg-config --libs opencv)
 LDFLAGS := $(OPENCV_LIBS) $(OPENCV_CFLAGS) -lstdc++ -lm 
 
-CC:=gcc -mavx -march=native
+CC:=gcc -mavx -march=native -O3
 CFLAGS:=-std=gnu++11
 SRC_FILES:=$(wildcard ./*.cpp)
 OBJ_FILES:=$(patsubst %.cpp,obj/%.o,$(SRC_FILES))
