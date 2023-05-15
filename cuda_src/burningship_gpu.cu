@@ -1,5 +1,6 @@
 // following definition is for opencv in CIMS
 #define _GLIBCXX_USE_CXX11_ABI 0
+//#define BLOCK_DIM 1024
 #define BLOCK_DIM 32
 
 #include <iostream>
@@ -161,8 +162,12 @@ namespace
 
 int main() {
   // define the image dimensions
-  int rows_x = 9600;
-  int cols_y = 10800;
+  //int rows_x = 9600;
+  //int cols_y = 10800;
+
+  // high resolution below
+  int rows_x = 38400;
+  int cols_y = 43200;
   int maxIter = 500;
   int total_img_pix = rows_x * cols_y;
 
@@ -194,9 +199,11 @@ int main() {
   printf("time to compute gpu version = %f s\n", t.toc());
   
   // Render results to image file with openCV
+  t.tic();
   Mat burningImgGPU(rows_x, cols_y, CV_8U);
   write_pixels_to_image_file(burningImgGPU, pixelMatrix_out, rows_x, cols_y);
   imwrite("burningship_gpu.png", burningImgGPU);
+  printf("time to produce image = %f s\n", t.toc());
 
   return EXIT_SUCCESS;
 }
