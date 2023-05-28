@@ -93,6 +93,7 @@ namespace
    __global__
    void parallelburningship(int* pixelMatrix, const int rows, const int cols, const float x1, const float y1, const float scaleX, const float scaleY, const int maxIter)
    {
+     // code reference: http://users.wfu.edu/choss/CUDA/docs/Lecture%205.pdf
      int i = blockIdx.y * blockDim.y + threadIdx.y;
      int j = blockIdx.x * blockDim.x + threadIdx.x;
      int idx = i + j * rows;
@@ -189,6 +190,7 @@ int main() {
   cudaMemcpy(d_pixelMatrix_gpu, pixelMatrix, total_img_pix*sizeof(int), cudaMemcpyHostToDevice);
   printf("time to malloc = %f s\n", t.toc());
 
+  // code reference: http://users.wfu.edu/choss/CUDA/docs/Lecture%205.pdf
   dim3 threadsPerBlock(BLOCK_DIM, BLOCK_DIM);
   dim3 dimGrid((int)ceil(rows_x/threadsPerBlock.x),(int)ceil(cols_y/threadsPerBlock.y));
 
