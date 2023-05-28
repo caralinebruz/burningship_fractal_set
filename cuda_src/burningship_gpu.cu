@@ -1,5 +1,6 @@
 // following definition is for opencv in CIMS
 #define _GLIBCXX_USE_CXX11_ABI 0
+//#define BLOCK_DIM 1024
 #define BLOCK_DIM 32
 
 #include <iostream>
@@ -92,6 +93,7 @@ namespace
    __global__
    void parallelburningship(int* pixelMatrix, const int rows, const int cols, const float x1, const float y1, const float scaleX, const float scaleY, const int maxIter)
    {
+     // code reference: http://users.wfu.edu/choss/CUDA/docs/Lecture%205.pdf
      int i = blockIdx.y * blockDim.y + threadIdx.y;
      int j = blockIdx.x * blockDim.x + threadIdx.x;
      int idx = i + j * rows;
@@ -161,8 +163,12 @@ namespace
 
 int main() {
   // define the image dimensions
-  int rows_x = 9600;
-  int cols_y = 10800;
+  //int rows_x = 9600;
+  //int cols_y = 10800;
+
+  // high resolution below
+  int rows_x = 38400;
+  int cols_y = 43200;
   int maxIter = 500;
   int total_img_pix = rows_x * cols_y;
 
@@ -184,6 +190,7 @@ int main() {
   cudaMemcpy(d_pixelMatrix_gpu, pixelMatrix, total_img_pix*sizeof(int), cudaMemcpyHostToDevice);
   printf("time to malloc = %f s\n", t.toc());
 
+  // code reference: http://users.wfu.edu/choss/CUDA/docs/Lecture%205.pdf
   dim3 threadsPerBlock(BLOCK_DIM, BLOCK_DIM);
   dim3 dimGrid((int)ceil(rows_x/threadsPerBlock.x),(int)ceil(cols_y/threadsPerBlock.y));
 
@@ -194,9 +201,11 @@ int main() {
   printf("time to compute gpu version = %f s\n", t.toc());
   
   // Render results to image file with openCV
+  t.tic();
   Mat burningImgGPU(rows_x, cols_y, CV_8U);
   write_pixels_to_image_file(burningImgGPU, pixelMatrix_out, rows_x, cols_y);
   imwrite("burningship_gpu.png", burningImgGPU);
+  printf("time to produce image = %f s\n", t.toc());
 
   return EXIT_SUCCESS;
 }
